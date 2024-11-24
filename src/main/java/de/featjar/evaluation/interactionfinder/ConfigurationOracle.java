@@ -21,17 +21,17 @@
 package de.featjar.evaluation.interactionfinder;
 
 import de.featjar.analysis.IConfigurationVerifyer;
-import de.featjar.formula.assignment.ABooleanAssignment;
+import de.featjar.formula.assignment.BooleanAssignment;
 import de.featjar.formula.assignment.BooleanSolution;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class ConfigurationOracle implements IConfigurationVerifyer {
-    private final List<? extends ABooleanAssignment> interactions;
+    private final List<? extends BooleanAssignment> interactions;
     private final double fpNoise, fnNoise;
 
-    public ConfigurationOracle(List<? extends ABooleanAssignment> interactions, double fpNoise, double fnNoise) {
+    public ConfigurationOracle(List<? extends BooleanAssignment> interactions, double fpNoise, double fnNoise) {
         this.interactions = interactions;
         this.fpNoise = fpNoise;
         this.fnNoise = fnNoise;
@@ -42,7 +42,7 @@ public class ConfigurationOracle implements IConfigurationVerifyer {
         final Random random = new Random(Arrays.hashCode(configuration.get()));
 
         int error = 1;
-        for (ABooleanAssignment interaction : interactions) {
+        for (BooleanAssignment interaction : interactions) {
             final boolean isFailing = configuration.containsAll(interaction);
             if (isFailing) {
                 break;

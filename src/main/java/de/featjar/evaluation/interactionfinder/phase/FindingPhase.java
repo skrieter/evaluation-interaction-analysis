@@ -30,9 +30,9 @@ import de.featjar.evaluation.Evaluator;
 import de.featjar.evaluation.interactionfinder.InteractionFinderRunner;
 import de.featjar.evaluation.util.ProgressTracker;
 import de.featjar.formula.VariableMap;
-import de.featjar.formula.assignment.ABooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignmentGroups;
+import de.featjar.formula.assignment.BooleanAssignmentList;
 import de.featjar.formula.assignment.BooleanClause;
 import de.featjar.formula.io.dimacs.BooleanAssignmentGroupsDimacsFormat;
 import java.io.BufferedReader;
@@ -42,7 +42,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -65,9 +64,9 @@ public class FindingPhase extends Evaluator {
     private static final Pattern compile = Pattern.compile("uint_([a-z]+\\d+)_([a-z]+\\d+)[.]dimacs");
 
     private static class ProcessResult {
-        List<ABooleanAssignment> foundInteractions;
-        ABooleanAssignment foundInteractionsMerged;
-        ABooleanAssignment foundInteractionsMergedAndUpdated;
+        BooleanAssignmentList foundInteractions;
+        BooleanAssignment foundInteractionsMerged;
+        BooleanAssignment foundInteractionsMergedAndUpdated;
         long elapsedTimeInMS;
         int verificationCounter;
         boolean timeoutOccured, errorOccured;
@@ -77,15 +76,15 @@ public class FindingPhase extends Evaluator {
             verificationCounter = -1;
             timeoutOccured = false;
             errorOccured = false;
-            foundInteractions = Collections.emptyList();
+            foundInteractions = new BooleanAssignmentList(null);
             foundInteractionsMerged = new BooleanAssignment();
             foundInteractionsMergedAndUpdated = new BooleanAssignment();
         }
 
         ProcessResult(
-                List<ABooleanAssignment> foundInteractions,
-                ABooleanAssignment foundInteractionsMerged,
-                ABooleanAssignment foundInteractionsMergedAndUpdated,
+                BooleanAssignmentList foundInteractions,
+                BooleanAssignment foundInteractionsMerged,
+                BooleanAssignment foundInteractionsMergedAndUpdated,
                 long elapsedTimeInMS,
                 int verificationCounter,
                 boolean timeoutOccured,
@@ -237,8 +236,8 @@ public class FindingPhase extends Evaluator {
                     IO.save(
                             new BooleanAssignmentGroups(
                                     variables,
-                                    List.of(List.of(
-                                            result.foundInteractionsMerged, result.foundInteractionsMergedAndUpdated))),
+                                    result.foundInteractionsMerged,
+                                    result.foundInteractionsMergedAndUpdated),
                             genPath.resolve(modelName)
                                     .resolve("found")
                                     .resolve(String.format(
@@ -348,9 +347,9 @@ public class FindingPhase extends Evaluator {
             int parsedVerificationCounter;
             boolean parsedTimeout;
             boolean parsedError;
-            List<ABooleanAssignment> parsedInteractions;
-            ABooleanAssignment parsedInteractionsMerged;
-            ABooleanAssignment parsedInteractionsMergedAndUpdated;
+            BooleanAssignmentList parsedInteractions;
+            BooleanAssignment parsedInteractionsMerged;
+            BooleanAssignment parsedInteractionsMergedAndUpdated;
             try (Stream<String> lines = Files.lines(output)) {
                 String[] results = lines.toArray(String[]::new);
                 parsedElapsedTimeInMS = Long.parseLong(results[0]);
@@ -360,9 +359,9 @@ public class FindingPhase extends Evaluator {
                 parsedInteractionsMerged = InteractionFinderRunner.parseLiteralList(results[4]);
                 parsedInteractionsMergedAndUpdated = InteractionFinderRunner.parseLiteralList(results[5]);
                 if ("null".equals(results[6])) {
-                    parsedInteractions = Collections.emptyList();
+                    parsedInteractions = new BooleanAssignmentList(variables);
                 } else {
-                    parsedInteractions = new ArrayList<>(results.length - 6);
+                    parsedInteractions = new BooleanAssignmentList(variables, results.length - 6);
                     for (int i = 6; i < results.length; i++) {
                         parsedInteractions.add(InteractionFinderRunner.parseLiteralList(results[i]));
                     }

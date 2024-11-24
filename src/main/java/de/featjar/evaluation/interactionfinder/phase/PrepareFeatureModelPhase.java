@@ -29,7 +29,6 @@ import de.featjar.base.io.csv.CSVFile;
 import de.featjar.evaluation.Evaluator;
 import de.featjar.evaluation.util.FileReader;
 import de.featjar.formula.VariableMap;
-import de.featjar.formula.assignment.ABooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignmentGroups;
 import de.featjar.formula.assignment.BooleanClause;
@@ -69,16 +68,14 @@ public class PrepareFeatureModelPhase extends Evaluator {
         // read fm
         String modelName = optionCombiner.getValue(0);
         int modelID = getSystemId(modelName);
-        Result<IFormula> load = modelReader.read(modelName);
-        if (load.isEmpty()) {
-            FeatJAR.log().problems(load.getProblems());
+        Result<IFormula> model = modelReader.read(modelName);
+        if (model.isEmpty()) {
+            FeatJAR.log().problems(model.getProblems());
             return 0;
         } else {
-            // get core
-            VariableMap variables =
-                    IBooleanRepresentation.toVariableMap(load.get()).compute();
-            BooleanClauseList cnf =
-                    IBooleanRepresentation.toBooleanClauseList(load.get()).compute();
+            BooleanClauseList cnf = IBooleanRepresentation.toBooleanCNFRepresentation(model.get())
+                    .compute();
+            VariableMap variables = cnf.getVariableMap();
             //            BooleanAssignmentList atomic =
             //                    Computations.of(cnf).map(ComputeAtomicSetsSAT4J::new).compute();
             //            Iterator<BooleanAssignment> iterator = atomic.getAll().iterator();
@@ -119,20 +116,22 @@ public class PrepareFeatureModelPhase extends Evaluator {
             atomicFreeVariables.normalize();
             core = new BooleanAssignment(
                     core.adapt(variables, atomicFreeVariables).orElseThrow());
-            List<BooleanClause> atomicFreeClauses = atomicFreeClauseLiterals.stream()
-                    .map(literals ->
-                            new BooleanClause(ABooleanAssignment.adapt(literals, variables, atomicFreeVariables, true)
-                                    .orElseThrow()))
-                    .collect(Collectors.toList());
+            BooleanClauseList atomicFreeClauses = new BooleanClauseList(
+                    atomicFreeVariables,
+                    atomicFreeClauseLiterals.stream()
+                            .map(literals -> new BooleanClause(
+                                    BooleanAssignment.adapt(literals, variables, atomicFreeVariables, true)
+                                            .orElseThrow()))
+                            .collect(Collectors.toList()));
 
             // save fm and core
             try {
                 IO.save(
-                        new BooleanAssignmentGroups(atomicFreeVariables, List.of(atomicFreeClauses)),
+                        new BooleanAssignmentGroups(atomicFreeVariables, atomicFreeClauses),
                         genPath.resolve(modelName).resolve("cnf.dimacs"),
                         new BooleanAssignmentGroupsDimacsFormat());
                 IO.save(
-                        new BooleanAssignmentGroups(atomicFreeVariables, List.of(List.of(core))),
+                        new BooleanAssignmentGroups(atomicFreeVariables, core),
                         genPath.resolve(modelName).resolve("core.dimacs"),
                         new BooleanAssignmentGroupsDimacsFormat());
                 CSVFile.writeCSV(modelCSV, w -> {

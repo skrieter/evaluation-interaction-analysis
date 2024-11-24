@@ -28,11 +28,11 @@ import de.featjar.base.computation.Computations;
 import de.featjar.base.data.IntegerList;
 import de.featjar.base.io.IO;
 import de.featjar.base.log.Log;
-import de.featjar.formula.assignment.ABooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignmentGroups;
 import de.featjar.formula.assignment.BooleanClause;
 import de.featjar.formula.assignment.BooleanClauseList;
+import de.featjar.formula.assignment.BooleanSolutionList;
 import de.featjar.formula.computation.IncInteractionFinder;
 import de.featjar.formula.io.csv.BooleanAssignmentGroupsCSVFormat;
 import de.featjar.formula.io.dimacs.BooleanAssignmentGroupsDimacsFormat;
@@ -113,11 +113,11 @@ public class InteractionFinderRunner {
             Long timeout = Long.parseLong(args[10]);
 
             thread.algorithm.reset();
-            thread.algorithm.setCore(core.getGroups().get(0).get(0).toClause());
+            thread.algorithm.setCore(core.getFirstGroup().getAll().get(0).toClause());
             thread.algorithm.setVerifier(
                     new ConfigurationOracle(interaction.toClauseList(0).getAll(), fpNoise, fnNoise));
             thread.algorithm.setUpdater(new RandomConfigurationUpdater(cnf, seed));
-            List<? extends ABooleanAssignment> list = sample.getGroups().get(0);
+            BooleanSolutionList list = sample.getFirstGroup().toSolutionList();
             thread.algorithm.addConfigurations(list);
 
             thread.start();

@@ -33,6 +33,7 @@ import de.featjar.evaluation.Evaluator;
 import de.featjar.formula.VariableMap;
 import de.featjar.formula.assignment.BooleanAssignment;
 import de.featjar.formula.assignment.BooleanAssignmentGroups;
+import de.featjar.formula.assignment.BooleanAssignmentList;
 import de.featjar.formula.assignment.BooleanClauseList;
 import de.featjar.formula.assignment.BooleanSolution;
 import de.featjar.formula.io.csv.BooleanAssignmentGroupsCSVFormat;
@@ -92,7 +93,7 @@ public class CreateInteractionsPhase extends Evaluator {
                 } else {
                     BooleanAssignmentGroups space = load.get();
                     variables = space.getVariableMap();
-                    cnf = new BooleanClauseList(space.getGroups().get(0), variables.getVariableCount());
+                    cnf = space.getFirstGroup().toClauseList();
                 }
                 Result<BooleanAssignmentGroups> load2 = IO.load(
                         genPath.resolve(modelName).resolve("core.dimacs"), new BooleanAssignmentGroupsDimacsFormat());
@@ -101,7 +102,7 @@ public class CreateInteractionsPhase extends Evaluator {
                     return 0;
                 } else {
                     BooleanAssignmentGroups space = load2.get();
-                    core = space.getGroups().get(0).get(0).toSolution();
+                    core = space.getFirstGroup().get(0).orElseThrow().toSolution();
                 }
                 interactionID = 0;
             }
@@ -133,7 +134,7 @@ public class CreateInteractionsPhase extends Evaluator {
                 }
                 try {
                     IO.save(
-                            new BooleanAssignmentGroups(variables, List.of(List.of(solution))),
+                            new BooleanAssignmentGroups(variables, solution),
                             genPath.resolve(modelName)
                                     .resolve("samples")
                                     .resolve(String.format("sol_gs%d.csv", modelIteration)),
@@ -146,8 +147,8 @@ public class CreateInteractionsPhase extends Evaluator {
                 interactionCount = optionCombiner.getValue(2);
             case 3:
                 interactionSize = optionCombiner.getValue(3);
-                ArrayList<BooleanAssignment> interactions = new ArrayList<>(interactionCount);
-                ArrayList<BooleanAssignment> updatedInteractions = new ArrayList<>(interactionCount);
+                BooleanAssignmentList interactions = new BooleanAssignmentList(variables, interactionCount);
+                BooleanAssignmentList updatedInteractions = new BooleanAssignmentList(variables, interactionCount);
                 for (int i = 0; i < interactionCount; i++) {
                     BooleanAssignment e =
                             new BooleanAssignment(Arrays.copyOf(randomizedLiterals.get(i), interactionSize));
@@ -159,13 +160,13 @@ public class CreateInteractionsPhase extends Evaluator {
                 }
                 try {
                     IO.save(
-                            new BooleanAssignmentGroups(variables, List.of(interactions)),
+                            new BooleanAssignmentGroups(variables, interactions),
                             genPath.resolve(modelName)
                                     .resolve("interactions")
                                     .resolve(String.format("int_g%d_gs%d.dimacs", interactionID, modelIteration)),
                             new BooleanAssignmentGroupsDimacsFormat());
                     IO.save(
-                            new BooleanAssignmentGroups(variables, List.of(updatedInteractions)),
+                            new BooleanAssignmentGroups(variables, updatedInteractions),
                             genPath.resolve(modelName)
                                     .resolve("interactions")
                                     .resolve(String.format("uint_g%d_gs%d.dimacs", interactionID, modelIteration)),
